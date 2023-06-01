@@ -1,5 +1,5 @@
 # Behavioral Partial Least Square Correlation (PLSC) to analyze the role of different components in the CPM model
-
+(still in progress)
 ## Background
 
 This repository contains the code  for a project conducted under the supervision of members of the [MIP:lab](https://miplab.epfl.ch/).
