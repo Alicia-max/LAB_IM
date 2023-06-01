@@ -14,14 +14,7 @@ However, while the Matlab toolbox has a significant number of tools dedicated to
 
 `BehavPLS.py` contains class  to wrap the dataset (brain & behavior data). 
 
-the main function initiates the BehavPLS classes and run the PLSC analysis and result plotting. More specifically, this files takes as an input argument a condig file that contains all the parameters of the BehavPLS class to run. See the directory `configs/`. 
-
-
 `compute.py` contains functions for the pre-processing of the data as well as for the PLS methods.
-
-
-
-`generate_decoder.py` contains a function that trains two [Decoder](https://nilearn.github.io/dev/modules/generated/nilearn.decoding.Decoder.html) (Linear SVC and Logistic Classifier), logs the results and saves them in a specific directory. Note that the implementation allows the training with only ONE set of parameters per decoder.
 
 `plot.py` contains plotter function to visualize the results.
 
