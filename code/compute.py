@@ -8,7 +8,9 @@ import scipy.stats as stats
 from numpy.random import RandomState,SeedSequence
 from numpy.random import MT19937
 from scipy import signal
+import scipy
 from sklearn.utils.validation import check_X_y
+import nibabel as nib
 
 def alignement(df,  offset_TR, onset_TR=72, affiche=False):
     """
@@ -39,6 +41,24 @@ def alignement(df,  offset_TR, onset_TR=72, affiche=False):
     
     return df
 
+def scrubbing(folder, onset, dur, vox, verbose=False, level=0.1):
+    
+    ## Read Motion File
+    mc = pd.read_csv(f"{folder}/mc/prefiltered_func_data_mcf_rel.rms", header=None)
+    
+    ## Get index to remove & keep 
+    mc=mc.iloc[onset:dur+onset-1].reset_index(drop=True)
+    rmove=np.where(mc>level)[0]
+    keep= np.where(mc<level)[0]
+    
+    ## Replace wrong values with None 
+    if(len(rmove!=0)):
+        pcs=len(keep)/(len(rmove)+len(keep))
+        vox[rmove]=np.nan
+        if(verbose) : print(f"% of data keep: {pcs*100} \n")
+            
+    return vox
+ 
 def resampling(df, dur, resol=1.3):
     """
     Resamples and aligns the behavioral dataset to match the corresponding scan sets 
@@ -62,42 +82,31 @@ def resampling(df, dur, resol=1.3):
     df.drop(range(dur-1, len(df)), axis=0, inplace=True)
     return df
 
-def standarization (X,Y, type_="zscore", durations=None):
-    """
-    Standarizes X and Y according to the given type
-    
-    Input
-    -------
-        - X, Y (DataFrame) : voxel-wise, behavior dataset 
-        - type_ (str) : type of standarization (only z-score, z-score + normalization, z-score per films)
-        - durations (array) : duration of each film used for the z-score per films standarization
-    Output
-    -------
-        - X_normed, Y_normed (DataFrame) : standarized X & Y
-    """
+def standa (X,Y, durations):  
     X_normed = X.copy()
     Y_normed = Y.copy()
     
-    if(type_=="zscore"): 
-
-        X_normed =X_normed.apply(stats.zscore)
-        Y_normed = Y_normed.apply(stats.zscore)
-        
-    elif(type_=="group_zscore"):
+    id_0=0
+    id_1=durations[0]
     
+    for dur in durations:  
+        id_1 = id_0+dur
+        X_normed[id_0:id_1]=(X_normed[id_0:id_1]-np.nanmean(X_normed[id_0:id_1], 
+                                                            axis=0))/(np.nanstd(X_normed[id_0:id_1],axis=0, ddof=0))
+        Y_normed[id_0:id_1]=(Y_normed[id_0:id_1]-np.nanmean(Y_normed[id_0:id_1],
+                                                            axis=0))/(np.nanstd(Y_normed[id_0:id_1],axis=0, ddof=0))
+
         
-        if(durations != None):
-            id_0=0
-            id_1=durations[0]
-            for idx in range(len(durations)-1):  
-                X_normed[id_0:id_1]=X_normed[id_0:id_1].apply(stats.zscore)
-                Y_normed[id_0:id_1]=Y_normed[id_0:id_1].apply(stats.zscore)
-                print('youy')
-                id_0=id_1
-                id_1=id_1+durations[idx+1]
+        
+     
+        id_0+=dur
+       
+        
+    return X_normed, Y_normed
 
-    return pd.DataFrame(X_normed), pd.DataFrame(Y_normed)
 
+
+    
 def R_cov(X, Y) : 
     """
     Computes the Correlation Matrix
@@ -301,14 +310,14 @@ def myPLS_get_LC_pvals(Sp_vect,S,nPerms, seuil=0.01) :
     
     ## Display & Concatenate significant LCs
     for i in range(nSignifLC):
-        sig_PLC.append(signif_LC[i])
+        sig_PLC.append(signif_LC[i][0])
         print(f"LC {sig_PLC[-1]} with p-value = {sprob[sig_PLC[-1]]} \n")
         
     return sprob, sig_PLC
 
 
         
-def myPLS_bootstrapping(X0,Y0,U,V, nBoots,  seed=1, type_="zscore", durations=None):
+def myPLS_bootstrapping(X0,Y0,U,V, nBoots, dur, seed=1):
     """
     Boostrap on X0 & Y0 and recompute SVD 
     
@@ -322,6 +331,7 @@ def myPLS_bootstrapping(X0,Y0,U,V, nBoots,  seed=1, type_="zscore", durations=No
     - seed (int)
     - type_ (str) : type of standarization (only z-scored, z-scored per films)
     - durations (array) : duration of each film used for the z-score per films standarization
+    - stand : string defining the type of standarization (None for to use the standarization methods, emo to just apply z-scores)
     Output 
     -------
     - boot_results (dic) : containg results from Bootstrapping --> Ub_vect nboots x M x L matrix
@@ -344,9 +354,8 @@ def myPLS_bootstrapping(X0,Y0,U,V, nBoots,  seed=1, type_="zscore", durations=No
         Xb = X0.sample(frac=1, replace=True, random_state=rs)
         Yb = Y0.sample(frac=1, replace=True, random_state=rs)
         
-        ## X & Y standardization
-        # Xb, Yb = standarization(Xb, Yb, type_, durations)
-       
+        
+        Xb,Yb = standa(Xb,Yb,dur)
         ## Cross-covariance
         Rb = R_cov(Xb, Yb)
         
@@ -376,7 +385,7 @@ def myPLS_bootstrapping(X0,Y0,U,V, nBoots,  seed=1, type_="zscore", durations=No
 
         
             
-def boot_select(LC_index, boot_res, X, level=2.5): 
+def boot_select(LC_index, boot_res, X, level=3): 
     """
    
     Select the important voxels based on the boot stability scores
@@ -400,4 +409,29 @@ def boot_select(LC_index, boot_res, X, level=2.5):
     select_X=np.zeros_like(X.iloc[:, LC_index])
     index = np.argwhere(np.array(abs(boot_res.iloc[:,LC_index]))>level)
     select_X[index[:,0]]=X.iloc[index[:,0], LC_index]
-    return select_X
+    return select_X, index
+
+def corr_brain_maps (Nifti1, Nifti2, LV_id) : 
+    nifti_file1 = nib.load(Nifti1)
+    nifti_data1 = nifti_file1.get_fdata()
+    
+    
+    # Load the second Nifti file
+    nifti_file2 = nib.load(Nifti2)
+    nifti_data2 = nifti_file2.get_fdata()
+    
+    # Flatten the arrays to 1D
+    array1 = nifti_data1.flatten()
+    array2 = nifti_data2.flatten()
+    # Calculate the correlation coefficient
+    correlation =scipy.stats.pearsonr(nifti_data1, nifti_data2)
+    # Print the correlation coefficient
+    print(f"Correlation coefficient for the LV {LV_id}:", correlation)
+    
+def corr_behav_saliences(df1, df2, LV_id) : 
+   
+    # Calculate the correlation coefficient
+    correlation = scipy.stats.pearsonr(np.array(df1[LV_id[0]]), np.array(df2[LV_id[1]]))
+    # Print the correlation coefficient
+    print(f"Correlation coefficient for the LV {LV_id[0]+1} & {LV_id[1]+1}", correlation)
+    

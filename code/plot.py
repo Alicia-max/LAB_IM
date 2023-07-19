@@ -6,6 +6,7 @@ import nibabel as nib
 from nilearn import plotting, image
 import numpy as np
 import matplotlib.pyplot as plt
+from nilearn.masking import compute_brain_mask, apply_mask
 
 def exp_var(S, Sp_vect, LC_pvals, name): 
     """
@@ -24,6 +25,8 @@ def exp_var(S, Sp_vect, LC_pvals, name):
         
     name: str
         Name of the plot file to save
+        
+   
     """
     fig, ax = plt.subplots(figsize=(8, 5))
     
@@ -37,24 +40,41 @@ def exp_var(S, Sp_vect, LC_pvals, name):
     ax.plot(nc, np.diag(S), color='grey', marker='o', fillstyle='none')
     
     # Plot the cumulative explained covariance
-    ax2.plot(nc, (np.cumsum(varexp(S))*100), color='seagreen', ls='--')
+    ax2.plot(nc, (np.cumsum(varexp(S))*100), color='steelblue', ls='--')
     
     # Labeling & Axes limits
     labels = [f"LC {idx+1} (p={np.round(i, 4)})" for idx, i in enumerate(LC_pvals)]
     plt.title('Explained Covariance by each LC')
     ax.set_ylabel('Singular values')
-    ax.set_xticklabels(labels, rotation=80)
+    ax.set_xticklabels(labels, rotation=40)
     ax.set_xlim([1, len(LC_pvals)])
     ax2.set_xticks(nc, labels)
-    ax2.set_ylabel('Explained correlation', color='seagreen')
+    ax2.set_ylabel('Explained correlation', color='steelblue')
     ax2.set_ylim([0, 100])
 
     # Defining display layout
     plt.tight_layout()
     
     # Save the Plot
-    plt.savefig(f"../Plots/Var/{name}.png", bbox_inches='tight')
+    plt.savefig(f"../Plots/Var/{name}.png", bbox_inches='tight',transparent = True )
 
+def print_var(S) : 
+    for idx,s in enumerate(varexp(S)) : 
+        print(f"Var for LC{idx+1} : {s}")
+        
+        
+def plot_all (res_decompo, res_permu, res_boot,  type_,  c_dark, c_light ):
+    
+    plot_behav(res_permu['sig_LC'] , res_decompo['Y'].columns, 
+               res_decompo['U'],  type_, res_boot['bsr_u'],res_boot['u_std'],  c_dark, c_light)
+
+    mask= compute_brain_mask(nib.load(os.path.join("../reg", 'gray_matter.nii.gz')))
+    for LC in res_permu['sig_LC'] :
+        V_final, selected_V = boot_select(LC,res_boot['bsr_v'], res_decompo['V'] )
+        save_fMRI(V_final,mask , f"LV{LC+1}_{type_}")
+        
+   
+    
 def save_fMRI(data, mask, title, shape=[91, 109, 91]):
     """
     Convert and save the received data into a Nifti file
@@ -133,22 +153,25 @@ def brain_plot(LC_indexes, name):
         List of tuples with the indexes of the LVs to plot
     name : str
         Name of the saliency map
+    color : str
+        Name of the color for the plot
     
     """
     for i in LC_indexes:
-        file = f'../Nifti/LV{i[0]+1}_{name}.nii.gz'
+        file = f'../Nifti/LV{i+1}_{name}.nii.gz'
         pic = image.load_img(file)
         plotting.plot_stat_map(pic,
-                               cmap = 'coolwarm',
                                display_mode='ortho',
                                draw_cross=False, 
-                               cut_coords=(37,-60,8),
                                annotate=True,
                                black_bg=False)
-        plt.savefig(f'../Plots/Brain/LV{i[0]+1}_{name}.png')
+        plt.savefig(f'../Plots/Brain/LV{i+1}_{name}.png', transparent = True)
+
+def modify_color(c, index, col ) : 
+    for i in index : 
+        c[i[0]] = col
         
-        
-def plot_behav(LC_indexes, x, U, name, boot_std): 
+def plot_behav(LC_indexes, x, U, name, bsr, std, color1, color2): 
     """
     Plot and Save the Behavioral Saliences
     
@@ -162,13 +185,32 @@ def plot_behav(LC_indexes, x, U, name, boot_std):
         Matrix of behavioral saliencies
     name : str
         Name of the saliency map
+    bsr : list
+        list of int with the stability score for U
+    std : list 
+        list of int with the standard deviation for U
+    color1 : str 
+        Name of the color for bar related to non relevant features
+    color2 : str 
+        Name of the color for bar related to relevant features
     """
-    for i in LC_indexes :
+    
+    if "WarmHeartedness" in x : 
+     
+        x.values[2] = "WH"
+       
+   
+    for i in LC_indexes :  
+        c = [color1]*len(U[i])
+       
+        
         f, ax = plt.subplots(figsize=(6,3))
-        fig=plt.bar(x, U[i[0]], yerr=boot_std[i[0]], color='lightseagreen')
-        ax.set_ylabel(f"Loadings {i[0]+1}")
-        plt.xticks(rotation=80)
-        plt.savefig(f"../Plots/Behav/Behav{i[0]+1}_{name}.png", bbox_inches='tight')
-
-
-
+        features_sel, selected_indexes  = boot_select(i, bsr, U)
+        modify_color(c, selected_indexes, color2)
+      
+        
+        
+        fig=plt.bar(x, np.array(U[i]), yerr=std[i], color= c)
+        ax.set_ylabel(f"Loadings {i+1}")
+        plt.xticks(rotation=35, fontsize=8)
+        plt.savefig(f"../Plots/Behav/Behav{i+1}_{name}.png", bbox_inches='tight', transparent=True)

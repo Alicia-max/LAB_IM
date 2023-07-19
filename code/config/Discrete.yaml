@@ -1,0 +1,39 @@
+# config.yaml
+
+# Directory paths
+onset_dir: ../../Raw_data
+mask_dir: ../reg
+fmri_dir: ../../Preprocessed_data
+behav_dir: ../Data/
+# List of film names to include in analysis
+films: 
+  - AfterTheRain
+  - BetweenViewings
+  - BigBuckBunny
+  - Chatter
+  - FirstBite
+  - LessonLearned
+  - Payload
+  - Sintel
+  - Spaceman
+  - Superhero
+  - TearsOfSteel
+  - TheSecretNumber
+  - ToClaireFromSonny
+  - YouAgain
+  
+# Number of Participants
+nb: 32
+
+# Type of Emotional Items
+type_: Discrete
+
+# Number of permutations for significance testing
+nPer: 1000
+
+# Number of bootstrap iterations
+nBoot: 1000
+
+# Seed 
+seed : 1
+         

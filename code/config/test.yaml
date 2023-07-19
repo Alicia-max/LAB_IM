@@ -1,0 +1,27 @@
+# config.yaml
+
+# Directory paths
+onset_dir: ../../Raw_data
+mask_dir: ../reg
+fmri_dir: ../../Preprocessed_data
+behav_dir: ../Data/
+# List of film names to include in analysis
+films: 
+  - AfterTheRain
+  
+  
+# Number of Participants
+nb: 5
+
+# Type of Emotional Items
+type_: test
+
+# Number of permutations for significance testing
+nPer: 1
+
+# Number of bootstrap iterations
+nBoot: 1
+
+# Seed 
+seed : 1
+         

@@ -1,0 +1,8 @@
+discrete_pkl: ../pkl/pls_res_Discrete.pkl
+appraisal_pkl : ../pkl/pls_res_Appraisal.pkl
+
+nPerms : 1000
+nBoot : 1000
+seed : 1
+seuil : 0.01
+
