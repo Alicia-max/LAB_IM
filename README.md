@@ -43,7 +43,7 @@ However, while the Matlab toolbox has a significant number of tools dedicated to
 Example config files are available in the `configs/` directory.\
 Simply run the following (as an example):
 
-python3 analysis_PLS.py --../config/test.yaml
+python3 analysis_PLS.py --config  config/test.yaml
 
 
 ## Acknowledgments
