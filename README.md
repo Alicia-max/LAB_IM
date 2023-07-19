@@ -4,9 +4,9 @@
 
 This repository contains the code  for a project conducted under the supervision of members of the [MIP:lab](https://miplab.epfl.ch/).
 We aim to probe the role of appraisal in emotion experience by conducting three PLSC analyses:
-- **1** using discrete emotions and brain activity (fMRI).
-- **2** using appraisal items and brain activity (fMRI).
-- **3** using appraisals and discrete emotions. 
+-  using discrete emotions and brain activity (fMRI).
+-  using appraisal items and brain activity (fMRI).
+- using appraisals and discrete emotions. 
 
 The overall aim is to compare each model in order to assess the relationship between appraisal and discrete emotions at the level of brain activation during the experience of an emotional event
 
