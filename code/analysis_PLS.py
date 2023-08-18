@@ -40,7 +40,7 @@ def main(onset_dir,mask_dir,fmri_dir,behav_dir,films,nb,type_,nPer,nBoot,seed):
     load_pkl(res_bootstrap, f"boot_res_{type_}")
 
 if __name__ == "__main__":
-    print("hello")
+   
     
     parser =  ArgumentParser()
     parser.add_argument("--config", type=str, default="../config/Appraisal.yaml")
